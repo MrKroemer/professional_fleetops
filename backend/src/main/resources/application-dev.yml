@@ -1,0 +1,26 @@
+# =============================================================================
+# Perfil `dev` — máquina do desenvolvedor e Docker Compose local.
+# Habilita o seed de dados fictícios e logs legíveis no console.
+# =============================================================================
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+fleetops:
+  # Em desenvolvimento a carga vem ligada: um ambiente vazio não serve para avaliar tela
+  # nenhuma, e os dados são os reais da empresa, não inventados.
+  carga-inicial:
+    habilitada: ${FLEETOPS_CARGA_INICIAL:true}
+  seed:
+    # Cria os usuários de demonstração descritos no README. Sem efeito fora do perfil dev.
+    habilitado: true
+    senha: ${FLEETOPS_SEED_SENHA:Fleet@2026}
+
+logging:
+  level:
+    br.com.proyfebrasil.fleetops: DEBUG
+    org.flywaydb: INFO
+    org.hibernate.SQL: INFO

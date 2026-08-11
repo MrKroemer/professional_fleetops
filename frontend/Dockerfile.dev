@@ -1,0 +1,22 @@
+# =============================================================================
+# Imagem de desenvolvimento do frontend: Vite com HMR sobre o código montado do
+# host. Não usar em produção — o build estático vive em `Dockerfile`.
+# =============================================================================
+FROM node:24-alpine
+
+WORKDIR /app
+
+# `node_modules` precisa existir na imagem, e pertencer a um usuário sem privilégios,
+# antes que o Compose monte o volume nomeado sobre ele: o Docker copia a posse do
+# diretório da imagem ao inicializar um volume vazio. Sem isto, o volume nasceria
+# de propriedade do root e o `npm install` falharia com EACCES.
+RUN mkdir -p /app/node_modules && chown -R node:node /app
+
+# Cache do npm dentro do HOME do usuário `node`, fora do bind mount do código.
+ENV npm_config_cache=/home/node/.npm
+
+EXPOSE 5173
+
+# `node_modules` é um volume persistente: reinstalar só é necessário quando as
+# dependências mudam, e o `npm install` já é idempotente nesse caso.
+CMD ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"]

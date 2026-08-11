@@ -1,0 +1,16 @@
+# =============================================================================
+# Imagem de desenvolvimento do backend: mantém o Gradle disponível no container
+# para recompilar em ciclo curto. Não usar em produção.
+# =============================================================================
+FROM gradle:8.14-jdk21
+
+WORKDIR /app
+
+ENV GRADLE_USER_HOME=/home/gradle/.gradle
+ENV SPRING_PROFILES_ACTIVE=dev
+
+EXPOSE 8080
+
+# `bootRun` com recarga automática: o código-fonte vem por bind mount, então
+# alterações no host são vistas imediatamente pelo container.
+CMD ["gradle", "--no-daemon", "bootRun", "--args=--spring.profiles.active=dev"]

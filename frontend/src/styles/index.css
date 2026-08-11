@@ -1,0 +1,275 @@
+@import 'tailwindcss';
+
+/*
+ * =============================================================================
+ * FleetOps — sistema de design
+ *
+ * IDENTIDADE
+ * A cor de marca é o laranja #E37501 do logotipo da Proyfe Brasil, que em oklch
+ * é `oklch(0.676 0.168 55)`. Toda a paleta orbita esse ponto: os neutros têm um
+ * leve viés quente (matiz ~60) para conviverem com o laranja sem parecerem
+ * cinza-azulado sujo, e as cores de severidade foram afastadas em matiz para não
+ * competirem com a marca.
+ *
+ * CONTRASTE — os valores abaixo foram medidos, não estimados:
+ *   #E37501 sobre branco ................. 3,08:1  (preenchimento e texto grande)
+ *   #E37501 sobre o fundo escuro ......... 5,87:1  (AA para texto)
+ *   texto #2B1A08 sobre #E37501 .......... 5,43:1  (AA)
+ *
+ * Daí duas decisões: no tema claro o laranja puro é usado como **preenchimento**
+ * com texto quase preto por cima — nunca como cor de texto pequeno sobre branco;
+ * para texto de marca sobre fundo claro existe `--marca-forte`, escurecido até
+ * 4,6:1. No tema escuro o laranja puro já passa em AA e serve como texto.
+ *
+ * Cores em oklch para que claro e escuro sejam derivados por luminosidade, sem
+ * repintar a paleta à mão. Toda cor passa por variável: nenhum componente usa
+ * cor literal.
+ * =============================================================================
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Superfícies — neutros de matiz quente (60), quase acromáticos. */
+  --fundo: oklch(0.99 0.003 70);
+  --fundo-alternativo: oklch(0.967 0.006 70);
+  --superficie: oklch(1 0 0);
+  --superficie-elevada: oklch(1 0 0);
+  --borda: oklch(0.9 0.008 65);
+  --borda-forte: oklch(0.84 0.012 62);
+
+  /* Texto */
+  --texto: oklch(0.25 0.014 60);
+  --texto-suave: oklch(0.5 0.012 60);
+  --texto-tenue: oklch(0.63 0.011 60);
+
+  /* Marca — #E37501 e derivados */
+  --marca: oklch(0.676 0.168 55);
+  --marca-forte: oklch(0.545 0.137 54);
+  --marca-intensa: oklch(0.62 0.16 54);
+  --marca-suave: oklch(0.955 0.03 70);
+  --marca-contraste: oklch(0.22 0.04 50);
+
+  /*
+   * Severidade — afastadas em matiz da marca para não serem confundidas com ela.
+   * Atenção é âmbar (matiz 92), não laranja: o laranja pertence à marca.
+   */
+  --critico: oklch(0.53 0.2 25);
+  --critico-suave: oklch(0.96 0.03 25);
+  --atencao: oklch(0.62 0.13 92);
+  --atencao-suave: oklch(0.96 0.05 95);
+  --sucesso: oklch(0.55 0.12 155);
+  --sucesso-suave: oklch(0.95 0.04 155);
+  --informativo: oklch(0.55 0.11 250);
+  --informativo-suave: oklch(0.96 0.03 250);
+
+  /*
+   * Séries categóricas dos gráficos — três faixas, nesta ordem, nunca cicladas.
+   *
+   * O teto é três porque as formas em que qualquer fatia encosta em qualquer outra
+   * (rosca, dispersão) exigem separação entre **todos** os pares, e não só entre
+   * vizinhos. Com quatro matizes, verde e magenta colapsam sob deuteranopia no tema
+   * escuro (ΔE 3,9 — o piso é 6). A cauda além da terceira classe é dobrada em
+   * "Outros", que usa o cinza de desênfase — cinza não carrega identidade.
+   *
+   * Valores conferidos por `scripts/validate_palette.js`: faixa de luminosidade,
+   * piso de croma, separação sob protanopia/deuteranopia/tritanopia, piso de visão
+   * normal e contraste contra a superfície. Todos passam nos dois temas.
+   */
+  --serie-1: #e37500;
+  --serie-2: #256cd1;
+  --serie-3: #009f6c;
+  --serie-neutra: oklch(0.72 0.008 60);
+
+  /* Foco e sombra */
+  --anel: oklch(0.62 0.16 54);
+  --sombra-cor: 30 30% 20%;
+
+  --raio: 0.5rem;
+}
+
+.dark {
+  --fundo: oklch(0.175 0.008 60);
+  --fundo-alternativo: oklch(0.148 0.008 60);
+  --superficie: oklch(0.215 0.009 60);
+  --superficie-elevada: oklch(0.25 0.011 60);
+  --borda: oklch(0.3 0.012 60);
+  --borda-forte: oklch(0.39 0.014 60);
+
+  --texto: oklch(0.95 0.005 70);
+  --texto-suave: oklch(0.755 0.01 70);
+  --texto-tenue: oklch(0.605 0.012 70);
+
+  /* No escuro o laranja puro já passa em AA — vira também cor de texto. */
+  --marca: oklch(0.7 0.165 57);
+  --marca-forte: oklch(0.78 0.14 62);
+  --marca-intensa: oklch(0.676 0.168 55);
+  --marca-suave: oklch(0.3 0.06 50);
+  --marca-contraste: oklch(0.17 0.03 50);
+
+  --critico: oklch(0.68 0.17 25);
+  --critico-suave: oklch(0.31 0.08 25);
+  --atencao: oklch(0.8 0.13 95);
+  --atencao-suave: oklch(0.32 0.06 92);
+  --sucesso: oklch(0.72 0.12 155);
+  --sucesso-suave: oklch(0.28 0.06 155);
+  --informativo: oklch(0.72 0.1 250);
+  --informativo-suave: oklch(0.29 0.06 250);
+
+  /* Passos próprios do tema escuro, derivados dos mesmos matizes e validados contra
+     a superfície escura — nunca uma inversão automática do tema claro. */
+  --serie-1: #de6f00;
+  --serie-2: #3d7ede;
+  --serie-3: #2eaa79;
+  --serie-neutra: oklch(0.55 0.01 60);
+
+  --anel: oklch(0.7 0.165 57);
+  --sombra-cor: 30 40% 2%;
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-fundo-alternativo: var(--fundo-alternativo);
+  --color-superficie: var(--superficie);
+  --color-superficie-elevada: var(--superficie-elevada);
+  --color-borda: var(--borda);
+  --color-borda-forte: var(--borda-forte);
+
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-texto-tenue: var(--texto-tenue);
+
+  --color-marca: var(--marca);
+  --color-marca-forte: var(--marca-forte);
+  --color-marca-intensa: var(--marca-intensa);
+  --color-marca-suave: var(--marca-suave);
+  --color-marca-contraste: var(--marca-contraste);
+
+  --color-critico: var(--critico);
+  --color-critico-suave: var(--critico-suave);
+  --color-atencao: var(--atencao);
+  --color-atencao-suave: var(--atencao-suave);
+  --color-sucesso: var(--sucesso);
+  --color-sucesso-suave: var(--sucesso-suave);
+  --color-informativo: var(--informativo);
+  --color-informativo-suave: var(--informativo-suave);
+
+  --color-serie-1: var(--serie-1);
+  --color-serie-2: var(--serie-2);
+  --color-serie-3: var(--serie-3);
+  --color-serie-neutra: var(--serie-neutra);
+
+  --color-anel: var(--anel);
+
+  --radius-base: var(--raio);
+
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--borda);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--fundo);
+    color: var(--texto);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Foco visível e consistente — requisito de acessibilidade por teclado. */
+  :focus-visible {
+    outline: 2px solid var(--anel);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Números tabulares em tabelas: colunas de KM e valores alinham verticalmente. */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--marca-suave);
+    color: var(--texto);
+  }
+
+  /* Barras de rolagem discretas, coerentes com o tema. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--borda-forte) transparent;
+  }
+}
+
+@layer utilities {
+  /* Link "pular para o conteúdo", visível apenas na navegação por teclado. */
+  .pular-para-conteudo {
+    position: absolute;
+    left: -9999px;
+    z-index: 100;
+  }
+
+  .pular-para-conteudo:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  /*
+   * Entrada escalonada de listas e cartões.
+   * O atraso vem de `--indice`, definido em linha por quem renderiza a lista.
+   */
+  .surgir {
+    animation: surgir 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(var(--indice, 0) * 45ms);
+  }
+
+  @keyframes surgir {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Brilho de marca que acompanha o cursor nos cartões do painel. */
+  .brilho-de-marca::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(
+      420px circle at var(--cursor-x, 50%) var(--cursor-y, 0%),
+      color-mix(in oklch, var(--marca) 16%, transparent),
+      transparent 62%
+    );
+    pointer-events: none;
+  }
+
+  .brilho-de-marca:hover::after {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# =============================================================================
+# Perfil `test`. A conexão com o banco é injetada pelo Testcontainers via
+# @ServiceConnection — nenhum banco externo é necessário para rodar a suíte.
+# Os segredos abaixo são fixos e descartáveis, válidos apenas dentro dos testes.
+# =============================================================================
+fleetops:
+  jwt:
+    secret: segredo-de-teste-com-mais-de-32-caracteres-para-hmac-sha256
+    access-ttl: PT15M
+    refresh-ttl: P7D
+    cookie-secure: false
+  cripto:
+    # openssl rand -base64 32 (valor fixo de teste)
+    chave: Y2hhdmUtZGUtdGVzdGUtYWVzLTI1Ni1iaXRzLTMyYiE=
+  cors:
+    origens: http://localhost:5173
+  alertas:
+    multa-antecedencia-dias: 5
+  seed:
+    habilitado: false
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN

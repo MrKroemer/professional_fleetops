@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Regras de lint do backend FleetOps.
+
+  Conjunto deliberadamente enxuto e acionável: a intenção é impedir código morto,
+  imports não usados, blocos vazios e armadilhas reais de Java — não impor estilo
+  cosmético que só gera ruído. Regras cosméticas ficam a cargo do formatador da IDE.
+-->
+<module name="Checker">
+    <property name="severity" value="warning"/>
+    <property name="charset" value="UTF-8"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Arquivos não podem terminar sem quebra de linha nem conter tabulação. -->
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileTabCharacter"/>
+
+    <!--
+      Marcadores de pendência não podem ser deixados no código (Seção 9.6).
+      A busca é sensível a maiúsculas de propósito: em texto pt-BR, "todo"/"Todo"
+      são palavras comuns e uma regra case-insensitive geraria só ruído.
+    -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\b(TODO|FIXME|HACK)\b"/>
+        <property name="ignoreCase" value="false"/>
+        <property name="message" value="Pendência (TODO/FIXME/HACK) não pode ser deixada no código; registre uma issue."/>
+    </module>
+
+    <!-- Proibição explícita: dinheiro nunca em ponto flutuante (Seção 11). -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\b(float|double)\s+(valor|preco|custo|total|mensalidade|montante)"/>
+        <property name="message" value="Valores monetários devem usar BigDecimal, nunca float/double."/>
+    </module>
+
+    <module name="LineLength">
+        <property name="max" value="140"/>
+        <property name="ignorePattern" value="^package.*|^import.*|^\s*\*.*https?://"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Imports -->
+        <module name="UnusedImports">
+            <property name="processJavadoc" value="true"/>
+        </module>
+        <module name="RedundantImport"/>
+        <module name="AvoidStarImport"/>
+        <module name="IllegalImport"/>
+
+        <!-- Armadilhas de correção -->
+        <module name="EqualsHashCode"/>
+        <module name="CovariantEquals"/>
+        <module name="StringLiteralEquality"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="MissingSwitchDefault"/>
+        <module name="FallThrough"/>
+        <module name="DefaultComesLast"/>
+        <module name="EmptyStatement"/>
+        <module name="EmptyBlock">
+            <property name="option" value="text"/>
+        </module>
+        <module name="NeedBraces"/>
+        <module name="OneStatementPerLine"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="IllegalThrows"/>
+        <module name="IllegalCatch">
+            <property name="illegalClassNames" value="java.lang.Throwable, java.lang.Error"/>
+        </module>
+
+        <!-- Modelagem -->
+        <module name="FinalClass"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="InterfaceIsType"/>
+        <module name="VisibilityModifier">
+            <property name="protectedAllowed" value="true"/>
+        </module>
+
+        <!-- Nomenclatura -->
+        <module name="PackageName"/>
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="ConstantName"/>
+        <module name="ParameterName"/>
+
+        <!-- Anotações -->
+        <module name="MissingOverride"/>
+        <module name="AnnotationLocation"/>
+
+        <!-- @SuppressWarnings exige justificativa explícita (Seção 9.6). -->
+        <module name="SuppressWarningsHolder"/>
+    </module>
+
+    <module name="SuppressWarningsFilter"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+</module>

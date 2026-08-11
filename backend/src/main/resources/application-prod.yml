@@ -1,0 +1,22 @@
+# =============================================================================
+# Perfil `prod`. Nenhum dado fictício é criado; logs em JSON estruturado para
+# ingestão por ferramenta de observabilidade (Seção 5.7).
+# =============================================================================
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  structured:
+    format:
+      console: ecs
+  level:
+    root: INFO
+    br.com.proyfebrasil.fleetops: INFO
+    org.springframework.web: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

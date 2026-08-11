@@ -1,0 +1,39 @@
+# --- Ambiente ---
+.env
+*.local
+
+# --- Backend (Gradle / Java) ---
+backend/build/
+backend/.gradle/
+backend/out/
+*.class
+
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+# `src/lib/api/schema.d.ts` é gerado da OpenAPI mas fica versionado de propósito:
+# sem ele, compilar o frontend exigiria um backend no ar. Regenerar: npm run api:types
+
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Dados locais de container ---
+.docker-data/
+
+# --- Dados locais nescessarios apenas para a construção do projeto. ---
+pages_fleet/062026-0465640763-vivomovel.pdf
+pages_fleet/botão_liberar_carro.html
+pages_fleet/experience.html
+pages_fleet/loader.html
+pages_fleet/login_enter_buttom.html
+pages_fleet/street.html
+
+
+

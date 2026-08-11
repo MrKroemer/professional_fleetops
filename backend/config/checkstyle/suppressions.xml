@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+    <!--
+      A classe de bootstrap do Spring Boot só tem o método `main`, mas não é uma classe
+      utilitária: o contêiner a instancia como bean de configuração, então ela não pode
+      ter construtor privado.
+    -->
+    <suppress files="FleetOpsApplication\.java" checks="HideUtilityClassConstructor"/>
+</suppressions>

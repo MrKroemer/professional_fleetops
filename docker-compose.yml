@@ -1,0 +1,241 @@
+# =============================================================================
+# FleetOps — ambiente completo.
+#
+#   Desenvolvimento:  docker compose --profile dev up -d
+#   Produção:         docker compose --profile prod up --build
+#
+# OS DOIS PERFIS NÃO CONVIVEM NA MESMA MÁQUINA.
+#
+# `postgres` e `minio` não têm perfil: sobem nos dois casos, com o mesmo volume.
+# Backend e frontend trocam conforme o perfil, mas publicam nas MESMAS portas do
+# host. Consequência: subir `prod` sobre um `dev` em uso sobrescreve o banco e
+# ocupa a porta do backend — e os containers de `dev` ficam em `Created`, sem
+# subir e sem erro evidente. `docker compose ps -a` revela isso na hora.
+#
+# A escolha é deliberada: uma porta por serviço, e não duas. O perfil `prod`
+# existe para o servidor de produção, onde é a única coisa rodando. Para validar
+# o build de produção localmente, derrube tudo antes e devolva o ambiente depois:
+#
+#   docker compose --profile dev --profile prod down -v --remove-orphans
+#
+# CUIDADO: nomear um serviço ignora o perfil dele. `docker compose up -d backend`
+# sobe o backend de PRODUÇÃO mesmo sem `--profile prod`, e ele fica lá.
+#
+# Nenhum segredo tem valor embutido aqui — tudo vem do `.env`.
+# =============================================================================
+
+name: fleetops
+
+services:
+  # ---------------------------------------------------------------------------
+  # Banco de dados
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: fleetops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fleetops}
+      POSTGRES_USER: ${POSTGRES_USER:-fleetops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      # Fuso do servidor em UTC; a conversão para America/Recife é da aplicação (RN-22).
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fleetops} -d ${POSTGRES_DB:-fleetops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Storage de objetos — fotos de book, checklists e CRLV (Seção 5.4)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: fleetops-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fleetops}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Cria o bucket de anexos uma única vez e encerra.
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: fleetops-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fleetops}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+      MINIO_BUCKET: ${MINIO_BUCKET:-fleetops-anexos}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set fleetops http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing fleetops/$$MINIO_BUCKET &&
+      mc anonymous set none fleetops/$$MINIO_BUCKET &&
+      echo 'Bucket ' $$MINIO_BUCKET ' pronto.'
+      "
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Backend — perfil de produção (imagem enxuta, JRE Temurin)
+  # ---------------------------------------------------------------------------
+  backend:
+    profiles: ["prod"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fleetops-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-fleetops}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-fleetops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      FLEETOPS_JWT_SECRET: ${FLEETOPS_JWT_SECRET:?defina FLEETOPS_JWT_SECRET no .env}
+      FLEETOPS_JWT_ACCESS_TTL: ${FLEETOPS_JWT_ACCESS_TTL:-PT15M}
+      FLEETOPS_JWT_REFRESH_TTL: ${FLEETOPS_JWT_REFRESH_TTL:-P7D}
+      FLEETOPS_AUTH_COOKIE_SECURE: ${FLEETOPS_AUTH_COOKIE_SECURE:-false}
+      FLEETOPS_CRYPTO_KEY: ${FLEETOPS_CRYPTO_KEY:?defina FLEETOPS_CRYPTO_KEY no .env}
+      FLEETOPS_CORS_ORIGINS: ${FLEETOPS_CORS_ORIGINS:-}
+      FLEETOPS_ALERTAS_MULTA_ANTECEDENCIA_DIAS: ${FLEETOPS_ALERTAS_MULTA_ANTECEDENCIA_DIAS:-5}
+      # Anexos. Em uma instalação com S3 de verdade, `FLEETOPS_S3_ENDPOINT` fica vazio e
+      # as chaves passam a ser as da conta — o código não muda.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fleetops}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+      FLEETOPS_S3_ENDPOINT: ${FLEETOPS_S3_ENDPOINT:-http://minio:9000}
+      FLEETOPS_S3_REGIAO: ${FLEETOPS_S3_REGIAO:-us-east-1}
+      FLEETOPS_S3_BUCKET: ${MINIO_BUCKET:-fleetops-anexos}
+      # Só tem efeito quando o banco ainda não tem nenhum usuário.
+      FLEETOPS_ADMIN_EMAIL: ${FLEETOPS_ADMIN_EMAIL:-}
+      FLEETOPS_ADMIN_SENHA: ${FLEETOPS_ADMIN_SENHA:-}
+      FLEETOPS_ADMIN_NOME: ${FLEETOPS_ADMIN_NOME:-Administrador}
+      # Migração do acervo: ligue na primeira subida, confira o relatório no log e
+      # desligue. Com o banco já povoado, ligá-la não faz nada.
+      FLEETOPS_CARGA_INICIAL: ${FLEETOPS_CARGA_INICIAL:-false}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  # ---------------------------------------------------------------------------
+  # Backend — perfil de desenvolvimento (código montado do host, seed habilitado)
+  # ---------------------------------------------------------------------------
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: fleetops-backend-dev
+    restart: unless-stopped
+    # O código-fonte vem por bind mount do host. Sem fixar o usuário, o Gradle
+    # rodaria como root e deixaria `build/` e `.gradle/` inacessíveis ao dono do
+    # projeto. Ajuste DOCKER_UID/DOCKER_GID no .env se seu usuário não for 1000.
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-fleetops}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-fleetops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      FLEETOPS_JWT_SECRET: ${FLEETOPS_JWT_SECRET:?defina FLEETOPS_JWT_SECRET no .env}
+      FLEETOPS_JWT_ACCESS_TTL: ${FLEETOPS_JWT_ACCESS_TTL:-PT15M}
+      FLEETOPS_JWT_REFRESH_TTL: ${FLEETOPS_JWT_REFRESH_TTL:-P7D}
+      FLEETOPS_AUTH_COOKIE_SECURE: "false"
+      FLEETOPS_CRYPTO_KEY: ${FLEETOPS_CRYPTO_KEY:?defina FLEETOPS_CRYPTO_KEY no .env}
+      FLEETOPS_CORS_ORIGINS: ${FLEETOPS_CORS_ORIGINS:-http://localhost:5173}
+      FLEETOPS_SEED_SENHA: ${FLEETOPS_SEED_SENHA:-Fleet@2026}
+      # Anexos: o backend fala com o MinIO pelo nome do serviço na rede do Compose.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fleetops}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+      FLEETOPS_S3_ENDPOINT: ${FLEETOPS_S3_ENDPOINT:-http://minio:9000}
+      FLEETOPS_S3_BUCKET: ${MINIO_BUCKET:-fleetops-anexos}
+    volumes:
+      - ./backend:/app
+      - gradle-cache:/home/gradle/.gradle
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
+  # Frontend — perfil de produção (build estático servido por Nginx + proxy /api)
+  # ---------------------------------------------------------------------------
+  frontend:
+    profiles: ["prod"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fleetops-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8081}:8080"
+    healthcheck:
+      # 127.0.0.1, e não `localhost`: a imagem do Nginx só acrescenta escuta em IPv6
+      # quando o `default.conf` é o dela, e o nosso é próprio — então o servidor fica só
+      # em IPv4. Dentro do container, `localhost` resolve para ::1 primeiro, e o wget
+      # recebia "connection refused" enquanto o site respondia normalmente do lado de
+      # fora. O contêiner ficava eternamente `unhealthy` sem nada estar errado, que é o
+      # pior tipo de alarme: o que ensina a ignorar o painel de saúde.
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:8080/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Frontend — perfil de desenvolvimento (Vite com HMR, proxy /api para o backend)
+  # ---------------------------------------------------------------------------
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: fleetops-frontend-dev
+    restart: unless-stopped
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    depends_on:
+      - backend-dev
+    environment:
+      # Dentro da rede do Compose o backend responde pelo nome do serviço.
+      VITE_API_PROXY_TARGET: http://backend-dev:8080
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_DEV_PORT:-5173}:5173"
+
+volumes:
+  postgres-data:
+  minio-data:
+  gradle-cache:
+  frontend-node-modules:

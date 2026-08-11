@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="FleetOps — gestão da frota locada da Proyfe Brasil: contratos, operação mensal, conformidade e custos."
+    />
+    <title>FleetOps — Gestão de Frotas</title>
+
+    <!--
+      Inter é carregada da rede quando disponível; se o acesso for bloqueado, a pilha
+      de fontes do sistema assume sem quebrar o layout.
+
+      Rubik entra só no peso 700 e serve a um único elemento — o botão de entrada, cuja
+      especificação em `pages_fleet/login_enter_buttom.html` a nomeia. Um peso de uma
+      família a mais na mesma requisição não custa viagem de rede adicional.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rubik:wght@700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Aplica o tema antes da primeira pintura, evitando o "flash" de tema claro
+      // quando a preferência salva é escura.
+      ;(function () {
+        try {
+          var salvo = localStorage.getItem('fleetops.tema')
+          var escuro =
+            salvo === 'escuro' ||
+            (salvo !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', escuro)
+        } catch (e) {
+          /* localStorage indisponível: mantém o tema claro */
+        }
+      })()
+    </script>
+  </head>
+  <body class="h-full">
+    <div id="root" class="h-full"></div>
+    <noscript>
+      O FleetOps precisa de JavaScript habilitado para funcionar.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
